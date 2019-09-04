@@ -66,7 +66,14 @@ func StartBot(conf config.Config) error {
 
 		messageBody := msg.Message.Content.Text.Body
 
-		if shared.IsAckRequest(messageBody) {
+		if isPingRequest(messageBody, kbc.GetUsername()) {
+			// Respond to messages of the form `ping botName` with `pong senderName`
+			_, err = kbc.SendMessageByConvID(msg.Message.ConversationID, fmt.Sprintf("pong %s", msg.Message.Sender.Username))
+			if err != nil {
+				LogError(conf, kbc, msg, err)
+				continue
+			}
+		} else if shared.IsAckRequest(messageBody) {
 			// Ack any AckRequests so that kssh can determine whether it has fully connected
 			_, err = kbc.SendMessageByConvID(msg.Message.ConversationID, shared.GenerateAckResponse(messageBody))
 			if err != nil {
@@ -125,4 +132,8 @@ func isConfiguredTeam(conf config.Config, teamName string, channelName string) b
 		}
 	}
 	return false
+}
+
+func isPingRequest(msg, botUsername string) bool {
+	return msg == fmt.Sprintf("ping %s", botUsername)
 }
